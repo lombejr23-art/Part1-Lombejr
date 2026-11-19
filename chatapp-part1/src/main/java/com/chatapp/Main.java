@@ -1,5 +1,6 @@
 package com.chatapp;
 
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -8,7 +9,10 @@ import java.util.Scanner;
  * Console entry point for the ChatApp PoE.
  * Part 1: registration and login.
  * Part 2: after a successful login the user enters QuickChat and can send,
- * store or disregard messages. No GUI / JOptionPane is used.
+ * store or disregard messages.
+ * Part 3: stored messages are loaded from storedMessages.json at start-up and
+ * a fourth QuickChat menu option lets the user work with them.
+ * No GUI / JOptionPane is used.
  */
 public class Main {
 
@@ -17,6 +21,9 @@ public class Main {
     private static boolean exitApp = false;
 
     public static void main(String[] args) {
+        // Part 3: read the JSON file into the stored messages array
+        Message.loadStoredMessages();
+
         System.out.println("=================================");
         System.out.println("      Welcome to ChatApp");
         System.out.println("=================================");
@@ -92,14 +99,14 @@ public class Main {
         login.loginUser(username, password);
         System.out.println("\n" + login.returnLoginStatus());
 
-        // Part 2: messages can only be sent after a successful login
+        // Messages can only be sent after a successful login
         if (login.isLoggedIn()) {
             quickChat();
         }
     }
 
     // ---------------------------------------------------------------
-    // Part 2: QuickChat
+    // QuickChat
     // ---------------------------------------------------------------
 
     private static void quickChat() {
@@ -113,6 +120,7 @@ public class Main {
             System.out.println("1) Send Messages");
             System.out.println("2) Show recently sent messages");
             System.out.println("3) Quit");
+            System.out.println("4) Stored Messages");
             System.out.print("> ");
             String choice = SCANNER.nextLine().trim();
 
@@ -130,7 +138,7 @@ public class Main {
                     System.out.println("\nTotal number of messages sent: " + Message.returnTotalMessages());
                     break;
                 case "2":
-                    System.out.println("Coming Soon.");
+                    System.out.println(Message.printMessages());
                     break;
                 case "3":
                     System.out.println("\nSession summary:");
@@ -139,8 +147,11 @@ public class Main {
                     System.out.println("Goodbye!");
                     exitApp = true;
                     break;
+                case "4":
+                    storedMessagesMenu();
+                    break;
                 default:
-                    System.out.println("Invalid option, please choose 1, 2 or 3.");
+                    System.out.println("Invalid option, please choose 1, 2, 3 or 4.");
             }
         }
     }
@@ -200,6 +211,7 @@ public class Main {
                     System.out.println(message.sentMessage(2));
                     System.out.print("> ");
                     if (SCANNER.nextLine().trim().equals("0")) {
+                        message.disregardMessage();
                         System.out.println("Message deleted.");
                         done = true;
                     }
@@ -212,6 +224,70 @@ public class Main {
                     System.out.println("Invalid option, please choose 1, 2 or 3.");
             }
         }
+    }
+
+    // ---------------------------------------------------------------
+    // Part 3: Stored Messages menu
+    // ---------------------------------------------------------------
+
+    private static void storedMessagesMenu() {
+        boolean back = false;
+        while (!back) {
+            System.out.println("\n--- Stored Messages ---");
+            System.out.println("1) Display sender and recipient of all stored messages");
+            System.out.println("2) Display the longest stored message");
+            System.out.println("3) Search for a message ID");
+            System.out.println("4) Search for all messages for a recipient");
+            System.out.println("5) Delete a message using its hash");
+            System.out.println("6) Display report of all stored messages");
+            System.out.println("0) Back");
+            System.out.print("> ");
+            String choice = SCANNER.nextLine().trim();
+
+            switch (choice) {
+                case "1":
+                    System.out.println("\n" + Message.displaySendersAndRecipients(senderName()));
+                    break;
+                case "2":
+                    System.out.println("\nLongest stored message: " + Message.longestStoredMessage());
+                    break;
+                case "3":
+                    System.out.print("Enter the message ID: ");
+                    System.out.println("\n" + Message.searchByMessageID(SCANNER.nextLine().trim()));
+                    break;
+                case "4":
+                    System.out.print("Enter the recipient's cell number: ");
+                    String recipient = SCANNER.nextLine().trim();
+                    List<String> found = Message.getMessagesForRecipient(recipient);
+                    if (found.isEmpty()) {
+                        System.out.println("\nNo messages found for " + recipient + ".");
+                    } else {
+                        System.out.println("\nMessages for " + recipient + ":");
+                        for (int i = 0; i < found.size(); i++) {
+                            System.out.println((i + 1) + ". " + found.get(i));
+                        }
+                    }
+                    break;
+                case "5":
+                    System.out.print("Enter the message hash: ");
+                    System.out.println("\n" + Message.deleteByHash(SCANNER.nextLine().trim()));
+                    break;
+                case "6":
+                    System.out.println("\n--- Stored Messages Report ---");
+                    System.out.println(Message.storedMessagesReport());
+                    break;
+                case "0":
+                    back = true;
+                    break;
+                default:
+                    System.out.println("Invalid option, please choose 0 to 6.");
+            }
+        }
+    }
+
+    /** The logged-in user is the sender of every message. */
+    private static String senderName() {
+        return login.getFirstName() + " " + login.getLastName();
     }
 
     private static int readPositiveInt(String prompt) {
